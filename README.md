@@ -2,9 +2,6 @@
 
 Flickr Desktop is a simple Windows application that automatically fetches and displays Flickr images as your desktop background. It can download public pictures or private images from your account (API Key required for this), refreshing your wallpaper at set intervals to keep your desktop fresh and dynamic.
 
-
-The Flickr Desktop Story: A Journey into the Pixelated Abyss
-
 It all started one rainy Saturday afternoon, when a group of friends were hanging out, brainstorming ideas to combine their love for technology with their obsession for beautiful images. The conversation somehow veered into the topic of personalized desktop wallpapers. We all loved changing up our backgrounds—whether it was a gorgeous landscape, a funky abstract design, or a cute puppy. But the process was repetitive. We'd set a new image every so often, but we wished there was a more dynamic way to update it—something fresh, effortless, and alive.
 
 That's when someone (probably after one too many cups of coffee) suggested, "What if we could automatically pull images from Flickr and set them as our desktop wallpaper? You know, something that updates every hour with a new stunning photo from the community?"
