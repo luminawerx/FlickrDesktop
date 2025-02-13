@@ -54,7 +54,7 @@ public partial class App : Application
 
             _notifyIcon.ContextMenuStrip.Items.Add("Change Wallpaper", null, async (s, e) => await ChangeWallpaperAsync());
             _notifyIcon.ContextMenuStrip.Items.Add("Close", null, (s, e) => ExitApplication());
-
+            _notifyIcon.DoubleClick += async(s,e) => await ChangeWallpaperAsync();
             _ = ChangeWallpaperAsync();
 
             _timer = new Timer(60 * 60 * 1000);
@@ -75,10 +75,20 @@ public partial class App : Application
         e.Handled = true;
     }
 
+    private static Color GetContrastingTextColor(Color bgColor)
+    {
+        // Calculate luminance
+        double luminance = (0.299 * bgColor.R + 0.587 * bgColor.G + 0.114 * bgColor.B) / 255;
+
+        // If the background is bright, use black text; otherwise, use white text
+        return luminance > 0.5 ? Color.Black : Color.White;
+    }
+
     private async Task ChangeWallpaperAsync()
         {
             try
             {
+                string? title = null;
                 string? imageUrl = null;
                 string jsonResponse = await _httpClient.GetStringAsync(FlickrApiUrl);
                 using JsonDocument doc = JsonDocument.Parse(jsonResponse);
@@ -88,7 +98,10 @@ public partial class App : Application
                     var selectedPhoto = photos[_random.Next(photos.Count)];
                     if (selectedPhoto.TryGetProperty("url_h", out var urlProperty))
                         imageUrl = urlProperty.GetString();
-                }
+
+                    if (selectedPhoto.TryGetProperty("title", out var titleProperty))
+                        title = titleProperty.GetString();
+            }
 
                 if (imageUrl!=null)
                 {
@@ -99,8 +112,22 @@ public partial class App : Application
                     using (var originalImage = new Bitmap(tempPath))
                     {
                         var resizedImage = new Bitmap(originalImage, new Size(1920, 1080));
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                        _notifyIcon.Text = $"Flickr Desktop - {title}";
+                            using Graphics g = Graphics.FromImage(resizedImage);
+                            using var font = new Font("Arial", 14, FontStyle.Regular);   
+                            SizeF textSize = g.MeasureString(title, font);
+                            float x = resizedImage.Width - textSize.Width - 8;
+                            float y = 8;
+                            var roi = new Rectangle((int)x - 8, (int)y-8, (int)textSize.Width + 16, (int)(textSize.Height) + 16);
+                            var contrastColor = GetContrastColor(resizedImage, roi);
+                            var bgColor = Color.FromArgb(64, contrastColor); ;
+                            g.FillRectangle(new SolidBrush(bgColor), roi);
+                            using SolidBrush textBrush = new(GetContrastingTextColor(bgColor));
+                            g.DrawString(title, font, textBrush, x, y);
+                        }
                         resizedImage.Save(newWallpaperPath);
-                        // TODO: render picture title, description etc. based on settings.
                     }
                     File.Delete(tempPath);
                     SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, newWallpaperPath, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
@@ -127,6 +154,29 @@ public partial class App : Application
         }
         Current.Shutdown();
     }
+    static Color GetContrastColor(Bitmap bitmap, Rectangle region)
+    {
+        if (region.X < 0 || region.Y < 0 || region.Right > bitmap.Width || region.Bottom > bitmap.Height)
+            throw new ArgumentException("Region is out of bitmap bounds.");
+
+        long totalBrightness = 0;
+        int pixelCount = 0;
+
+        for (int x = region.X; x < region.Right; x++)
+        {
+            for (int y = region.Y; y < region.Bottom; y++)
+            {
+                Color pixel = bitmap.GetPixel(x, y);
+                int brightness = (pixel.R * 299 + pixel.G * 587 + pixel.B * 114) / 1000; // Perceived brightness formula
+                totalBrightness += brightness;
+                pixelCount++;
+            }
+        }
+
+        int avgBrightness = (int)(totalBrightness / pixelCount);
+        return avgBrightness > 128 ? Color.Black : Color.White; // Choose high contrast color
     }
+
+}
 
 
